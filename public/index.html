@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>RNG CHAT</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    #messages {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      max-height: calc(100vh - 100px);
+    }
+
+    #messages li {
+      padding: 12px;
+      margin-bottom: 10px;
+      background-color: #f4f4f4;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    #form {
+      padding: 10px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #input {
+      border: none;
+      padding: 12px;
+      width: calc(100% - 110px);
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    #sendButton {
+      width: 100px;
+      background: #007bff;
+      border: none;
+      padding: 12px;
+      cursor: pointer;
+      color: white;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    #sendButton:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    /* Glassy Scrollbar Styles */
+    #messages::-webkit-scrollbar {
+      width: 12px;
+      /* Width of the scrollbar */
+    }
+
+    #messages::-webkit-scrollbar-track {
+      background: rgba(255,
+          255,
+          255,
+          0.1);
+      /* Very translucent background color of the scrollbar track */
+      border-radius: 8px;
+      /* Rounded corners for the track */
+      backdrop-filter: blur(10px);
+      /* Blur effect for a glassy appearance */
+    }
+
+    #messages::-webkit-scrollbar-thumb {
+      background: rgba(0,
+          123,
+          255,
+          0.5);
+      /* Semi-transparent color of the scrollbar thumb */
+      border-radius: 8px;
+      /* Rounded corners for the thumb */
+      backdrop-filter: blur(10px);
+      /* Blur effect for the thumb to enhance the glassy look */
+    }
+
+    #messages::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,
+          123,
+          255,
+          0.7);
+      /* Slightly less transparent color when hovering over the scrollbar thumb */
+    }
+  </style>
+</head>
+
+<body>
+  <ul id="messages"></ul>
+  <form id="form" action="">
+    <input id="input" autocomplete="off" placeholder="Type your message here" maxlength="250" />
+    <button id="sendButton" disabled>Send</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Generate a random username
+    function generateRandomName() {
+      const randomNumber = Math.floor(1000 + Math.random() * 9000);
+      return `Anonymous ${randomNumber}`;
+    }
+
+    const username = generateRandomName();
+
+    const socket = io();
+
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const sendButton = document.getElementById("sendButton");
+    const messages = document.getElementById("messages");
+    let canSend = true;
+
+    input.addEventListener("input", () => {
+      sendButton.disabled = !input.value.trim();
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (input.value && canSend) {
+        socket.emit("chat message", {
+          username: username,
+          message: input.value,
+        });
+        input.value = "";
+        sendButton.disabled = true;
+        canSend = false;
+
+        setTimeout(() => {
+          canSend = true;
+          sendButton.disabled = !input.value.trim();
+        }, 500);
+      }
+    });
+
+    socket.on("init", (initialMessages) => {
+      appendMessages(initialMessages);
+      scrollToBottom();
+    });
+
+    socket.on("chat message", (data) => {
+      appendMessage(data);
+      scrollToBottom();
+    });
+
+    function appendMessage(data) {
+      const item = document.createElement("li");
+      item.textContent = `${data.username}: ${data.message}`;
+      messages.appendChild(item);
+    }
+
+    function appendMessages(messagesData) {
+      messagesData.forEach((data) => {
+        appendMessage(data);
+      });
+    }
+
+    function scrollToBottom() {
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
+</body>
+
+</html>
