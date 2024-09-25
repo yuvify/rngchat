@@ -64,39 +64,22 @@
     /* Glassy Scrollbar Styles */
     #messages::-webkit-scrollbar {
       width: 12px;
-      /* Width of the scrollbar */
     }
 
     #messages::-webkit-scrollbar-track {
-      background: rgba(255,
-          255,
-          255,
-          0.1);
-      /* Very translucent background color of the scrollbar track */
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      /* Rounded corners for the track */
       backdrop-filter: blur(10px);
-      /* Blur effect for a glassy appearance */
     }
 
     #messages::-webkit-scrollbar-thumb {
-      background: rgba(0,
-          123,
-          255,
-          0.5);
-      /* Semi-transparent color of the scrollbar thumb */
+      background: rgba(0, 123, 255, 0.5);
       border-radius: 8px;
-      /* Rounded corners for the thumb */
       backdrop-filter: blur(10px);
-      /* Blur effect for the thumb to enhance the glassy look */
     }
 
     #messages::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,
-          123,
-          255,
-          0.7);
-      /* Slightly less transparent color when hovering over the scrollbar thumb */
+      background: rgba(0, 123, 255, 0.7);
     }
   </style>
 </head>
@@ -108,7 +91,6 @@
     <button id="sendButton" disabled>Send</button>
   </form>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
     // Generate a random username
     function generateRandomName() {
@@ -118,7 +100,8 @@
 
     const username = generateRandomName();
 
-    const socket = io();
+    // Connect to WebSocket server
+    const socket = new WebSocket(`ws://${window.location.host}`);
 
     const form = document.getElementById("form");
     const input = document.getElementById("input");
@@ -133,10 +116,11 @@
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       if (input.value && canSend) {
-        socket.emit("chat message", {
+        const messageData = {
           username: username,
           message: input.value,
-        });
+        };
+        socket.send(JSON.stringify(messageData));
         input.value = "";
         sendButton.disabled = true;
         canSend = false;
@@ -148,14 +132,16 @@
       }
     });
 
-    socket.on("init", (initialMessages) => {
-      appendMessages(initialMessages);
-      scrollToBottom();
-    });
-
-    socket.on("chat message", (data) => {
-      appendMessage(data);
-      scrollToBottom();
+    socket.addEventListener("message", (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === "init") {
+        appendMessages(data.messages);
+        scrollToBottom();
+      } else if (data.type === "chat message") {
+        appendMessage(data.data);
+        scrollToBottom();
+      }
     });
 
     function appendMessage(data) {
