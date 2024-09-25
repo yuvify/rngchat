@@ -1,22 +1,24 @@
 const express = require("express");
 const http = require("http");
-const socketIo = require("socket.io");
+const WebSocket = require("ws");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const wss = new WebSocket.Server({ server });
 
 let messages = [];
 const cooldowns = new Map();
 
 app.use(express.static("public"));
 
-io.on("connection", (socket) => {
-  socket.emit("init", messages.slice(-100));
+wss.on("connection", (ws) => {
+  // Send the last 100 messages to the newly connected client
+  ws.send(JSON.stringify({ type: "init", messages: messages.slice(-100) }));
 
-  socket.on("chat message", (data) => {
+  ws.on("message", (message) => {
+    const data = JSON.parse(message);
     const now = Date.now();
-    const lastMessageTime = cooldowns.get(socket.id) || 0;
+    const lastMessageTime = cooldowns.get(ws) || 0;
 
     if (data.message.length > 250) {
       console.log("Message is too long");
@@ -29,13 +31,18 @@ io.on("connection", (socket) => {
     }
 
     messages.push(data);
-    cooldowns.set(socket.id, now);
+    cooldowns.set(ws, now);
 
-    io.emit("chat message", data);
+    // Broadcast the message to all connected clients
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: "chat message", data }));
+      }
+    });
   });
 
-  socket.on("disconnect", () => {
-    cooldowns.delete(socket.id);
+  ws.on("close", () => {
+    cooldowns.delete(ws);
   });
 });
 
