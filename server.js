@@ -18,7 +18,7 @@ wss.on("connection", (ws) => {
   ws.on("message", (message) => {
     const data = JSON.parse(message);
     const now = Date.now();
-    const lastMessageTime = cooldowns.get(ws) || 0;
+    const lastMessageTime = cooldowns.get(data.username) || 0;
 
     if (data.message.length > 250) {
       console.log("Message is too long");
@@ -31,7 +31,7 @@ wss.on("connection", (ws) => {
     }
 
     messages.push(data);
-    cooldowns.set(ws, now);
+    cooldowns.set(data.username, now);
 
     // Broadcast the message to all connected clients
     wss.clients.forEach((client) => {
@@ -42,7 +42,7 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
-    cooldowns.delete(ws);
+    cooldowns.delete(ws.username); // Clean up cooldown on disconnect
   });
 });
 
