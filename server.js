@@ -32,9 +32,6 @@ fastify.post('/messages', async (request, reply) => {
   messages.push({ username, message });
   cooldowns.set(username, now);
   
-  // Broadcast to all clients (you can implement a more sophisticated approach here)
-  // For simplicity, we're just storing the messages on the server
-
   return { success: true };
 });
 
