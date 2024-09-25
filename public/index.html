@@ -11,6 +11,7 @@
       margin: 0;
       padding: 0;
       font-size: 16px;
+      background-color: #f0f0f0;
     }
 
     #messages {
@@ -37,6 +38,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      background-color: white;
     }
 
     #input {
@@ -45,6 +47,7 @@
       width: calc(100% - 110px);
       font-size: 16px;
       border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 
     #sendButton {
@@ -61,27 +64,6 @@
     #sendButton:disabled {
       background: #6c757d;
       cursor: not-allowed;
-    }
-
-    /* Glassy Scrollbar Styles */
-    #messages::-webkit-scrollbar {
-      width: 12px;
-    }
-
-    #messages::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      backdrop-filter: blur(10px);
-    }
-
-    #messages::-webkit-scrollbar-thumb {
-      background: rgba(0, 123, 255, 0.5);
-      border-radius: 8px;
-      backdrop-filter: blur(10px);
-    }
-
-    #messages::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 123, 255, 0.7);
     }
   </style>
 </head>
@@ -101,53 +83,51 @@
     }
 
     const username = generateRandomName();
-    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}`);
-
-    const form = document.getElementById("form");
-    const input = document.getElementById("input");
-    const sendButton = document.getElementById("sendButton");
-    const messages = document.getElementById("messages");
+    const messagesList = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const sendButton = document.getElementById('sendButton');
     let canSend = true;
 
-    input.addEventListener("input", () => {
+    input.addEventListener('input', () => {
       sendButton.disabled = !input.value.trim();
     });
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (input.value && canSend) {
-        const messageData = {
-          username: username,
-          message: input.value,
-        };
-        socket.send(JSON.stringify(messageData));
-        input.value = "";
-        sendButton.disabled = true;
-        canSend = false;
+        const response = await fetch('/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, message: input.value }),
+        });
 
-        setTimeout(() => {
-          canSend = true;
-          sendButton.disabled = !input.value.trim();
-        }, 500);
+        if (response.ok) {
+          input.value = '';
+          sendButton.disabled = true;
+          canSend = false;
+
+          setTimeout(() => {
+            canSend = true;
+            sendButton.disabled = !input.value.trim();
+          }, 500);
+        } else {
+          const error = await response.json();
+          console.error('Error:', error);
+        }
       }
     });
 
-    socket.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === "init") {
-        appendMessages(data.messages);
-        scrollToBottom();
-      } else if (data.type === "chat message") {
-        appendMessage(data.data);
-        scrollToBottom();
-      }
-    });
+    async function fetchMessages() {
+      const response = await fetch('/messages');
+      const data = await response.json();
+      appendMessages(data.messages);
+    }
 
     function appendMessage(data) {
-      const item = document.createElement("li");
+      const item = document.createElement('li');
       item.textContent = `${data.username}: ${data.message}`;
-      messages.appendChild(item);
+      messagesList.appendChild(item);
     }
 
     function appendMessages(messagesData) {
@@ -156,9 +136,8 @@
       });
     }
 
-    function scrollToBottom() {
-      messages.scrollTop = messages.scrollHeight;
-    }
+    // Poll for new messages every 2 seconds
+    setInterval(fetchMessages, 2000);
   </script>
 </body>
 
