@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RNG CHAT</title>
   <style>
     body {
@@ -99,9 +101,7 @@
     }
 
     const username = generateRandomName();
-
-    // Connect to WebSocket server
-    const socket = new WebSocket(`ws://${window.location.host}`);
+    const socket = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}`);
 
     const form = document.getElementById("form");
     const input = document.getElementById("input");
